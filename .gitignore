@@ -1,3 +1,7 @@
 flagged
 env
-gitignore
+.gitignore
+detect.py
+my.jpg
+Screenshot (59).png
+image_temp.png

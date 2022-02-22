@@ -34,8 +34,44 @@ def shape_recognition():
     return {labels[i]: float(score[i]) for i in range(len(labels))}
     
 def convert(image):
-    result = image.copy()
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    with tf.io.gfile.GFile('./detection_model/frozen_inference_graph.pb', 'rb') as f:
+        graph_def = tf.compat.v1.GraphDef()
+        graph_def.ParseFromString(f.read())
+
+    with tf.compat.v1.Session() as sess:
+        # Restore session
+        sess.graph.as_default()
+        tf.import_graph_def(graph_def, name='')
+
+        # Read and preprocess an image.
+        img = image
+        rows = img.shape[0]
+        cols = img.shape[1]
+        inp = cv2.resize(img, (300, 300))
+        inp = inp[:, :, [2, 1, 0]]  # BGR2RGB
+
+        # Run the model
+        out = sess.run([sess.graph.get_tensor_by_name('num_detections:0'),
+                        sess.graph.get_tensor_by_name('detection_scores:0'),
+                        sess.graph.get_tensor_by_name('detection_boxes:0'),
+                        sess.graph.get_tensor_by_name('detection_classes:0')],
+                    feed_dict={'image_tensor:0': inp.reshape(1, inp.shape[0], inp.shape[1], 3)})
+
+        # Visualize detected bounding boxes.
+        num_detections = int(out[0][0])
+        for i in range(num_detections):
+            classId = int(out[3][0][i])
+            score = float(out[1][0][i])
+            bbox = [float(v) for v in out[2][0][i]]
+            if score > 0.8:
+                x = (bbox[1] * cols) #-20 #left
+                y = (bbox[0] * rows)  #- 25 #top
+                right = (bbox[3] * cols) #+ 20
+                bottom = (bbox[2] * rows ) #+20
+                crop=img[int(y): int(bottom),int(x):int(right)]
+                detect=cv2.rectangle(img, (int(x), int(y)), (int(right), int(bottom)), (125, 255, 51), thickness=2)
+    result = crop.copy()
+    image = cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)
     lower1 = np.array([0, 100, 20])
     upper1 = np.array([10, 255, 255])
     
@@ -63,36 +99,35 @@ def convert(image):
     if np.count_nonzero(red_full_mask) < np.count_nonzero(blue_full_mask):
         if np.count_nonzero(blue_only==[78,6,0])>np.count_nonzero(blue_only):
             filled=fill(red_full_mask)
-
             save(filled)
             bg_removed = cv2.bitwise_and(result, result, mask = filled)
-            return shape_recognition(),bg_removed,"Red"
+            return detect,shape_recognition(),bg_removed,"Red"
         elif np.count_nonzero(blue_only==[78,6,0])<np.count_nonzero(blue_only):
             filled=fill(blue_full_mask)
             save(filled)
             bg_removed = cv2.bitwise_and(result, result, mask = filled)
-            return shape_recognition(),bg_removed,"Blue"
+            return detect,shape_recognition(),bg_removed,"Blue"
     elif np.count_nonzero(blue_full_mask) < np.count_nonzero(red_full_mask):
         filled=fill(red_full_mask)
         save(filled)
         bg_removed = cv2.bitwise_and(result, result, mask = filled)
-        return shape_recognition(),bg_removed,"Red"
+        return detect, shape_recognition(),bg_removed,"Red"
     else:
         return result, "undefined"
 
 
 
-
 iface=gr.Interface(convert,
     inputs=gr.inputs.Image(label="Upload an Image"),
-    outputs=[gr.outputs.Label(num_top_classes=1, label="Shape"),
+    outputs=[gr.outputs.Image(label="Detected Image"),
+    gr.outputs.Label(num_top_classes=1, label="Shape"),
     gr.outputs.Image(label="Removed Background Image"),
     gr.outputs.Label(label="Color"),
     ],
-    live=True,
-    title="Traffic Sign Shape & Color Detection",
-    examples=['./examples/1.jpg','./examples/2.jpg', './examples/got.jpg', './examples/goti.jpg', './examples/images.jpg'],
-    description='This is my Thesis Project'
+    title="Traffic Sign Detection with Shape & Color Description",
+    examples=['examples/Screenshot (57).png','./examples/1.jpg','./examples/2.jpg', './examples/got.jpg', './examples/goti.jpg', './examples/images.jpg'],
+    description='This is my Thesis Project',
+    theme='grass'
 )
 
 iface.launch(debug=True,inbrowser=True)
