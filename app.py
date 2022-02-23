@@ -3,6 +3,7 @@ import tensorflow as tf
 import gradio as gr
 import numpy as np
 import cv2 as cv2
+from PIL import Image, ImageFilter
 
 json_file = open('./model/model1.json', 'r')
 loaded_model_json = json_file.read()
@@ -12,6 +13,8 @@ model.load_weights("./model/model1.h5")
 
 labels=["Octagon","Triangle","Circle Prohibitory","Circle","Rhombus"]
 
+
+
 def fill(img):
   cnts = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
   cnts = cnts[0] if len(cnts) == 2 else cnts[1]
@@ -20,20 +23,24 @@ def fill(img):
   return img
 
 def save(img):
+    img= cv2.bilateralFilter(img,9,75,75)
     width = 32
     height = 32
     dim = (width, height)
     resized=cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
     return cv2.imwrite('./image_temp.png',resized)
 
-def shape_recognition():
+def shape_recognition(number):
     image=cv2.imread('./image_temp.png')
     image_array= np.expand_dims(image, axis=0)
     predictions=model.predict(image_array)
     score = tf.nn.softmax(predictions[0])
-    return {labels[i]: float(score[i]) for i in range(len(labels))}
+    # return {f"{number +' '+ labels[i] }": float(score[i]) for i in range(len(labels))}
+    return f'Shape {str(number)}:'+" "+ f'{labels[np.argmax(score)]}'
     
-def convert(image):
+def detect(image):
+    shape_n=[]
+    color=[]
     with tf.io.gfile.GFile('./detection_model/frozen_inference_graph.pb', 'rb') as f:
         graph_def = tf.compat.v1.GraphDef()
         graph_def.ParseFromString(f.read())
@@ -45,20 +52,21 @@ def convert(image):
 
         # Read and preprocess an image.
         img = image
+        cropper=img.copy()
         rows = img.shape[0]
         cols = img.shape[1]
         inp = cv2.resize(img, (300, 300))
-        inp = inp[:, :, [2, 1, 0]]  # BGR2RGB
+        #inp = inp[:, :, [2, 1, 0]]  # BGR2RGB
 
         # Run the model
         out = sess.run([sess.graph.get_tensor_by_name('num_detections:0'),
                         sess.graph.get_tensor_by_name('detection_scores:0'),
                         sess.graph.get_tensor_by_name('detection_boxes:0'),
                         sess.graph.get_tensor_by_name('detection_classes:0')],
-                    feed_dict={'image_tensor:0': inp.reshape(1, inp.shape[0], inp.shape[1], 3)})
-
+                    feed_dict={'image_tensor:0': inp.reshape(1, inp.shape[0], inp.shape[1], 3)})     
         # Visualize detected bounding boxes.
         num_detections = int(out[0][0])
+        roi=[]
         for i in range(num_detections):
             classId = int(out[3][0][i])
             score = float(out[1][0][i])
@@ -68,61 +76,72 @@ def convert(image):
                 y = (bbox[0] * rows)  #- 25 #top
                 right = (bbox[3] * cols) #+ 20
                 bottom = (bbox[2] * rows ) #+20
-                crop=img[int(y): int(bottom),int(x):int(right)]
-                detect=cv2.rectangle(img, (int(x), int(y)), (int(right), int(bottom)), (125, 255, 51), thickness=2)
-    result = crop.copy()
-    image = cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)
-    lower1 = np.array([0, 100, 20])
-    upper1 = np.array([10, 255, 255])
-    
-    # upper boundary RED color range values; Hue (160 - 180)
-    lower2 = np.array([160,100,20])
-    upper2 = np.array([179,255,255]) 
-    
-    lower_blue_1 = np.array([112,50,50])
-    upper_blue_1 = np.array([130,255,255])
-    lower_blue_2 = np.array([96, 80, 2])
-    upper_blue_2 = np.array([126, 255, 255])
+                crop=cropper[int(y): int(bottom),int(x):int(right)]
+                roi.append(crop)
+                detect=cv2.rectangle(img, (int(x), int(y)), (int(right), int(bottom)), (15, 255,100), thickness=4)
+                cv2.putText(detect, f'{i+1}', (int(x), int(y-10)), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,0), 5)
+    count=1
+    for i in roi:
+        result = i.copy()
+        image = cv2.cvtColor(i, cv2.COLOR_RGB2HSV)
+        lower1 = np.array([0, 100, 20])
+        upper1 = np.array([10, 255, 255])
+        
+        # upper boundary RED color range values; Hue (160 - 180)
+        lower2 = np.array([160,100,20])
+        upper2 = np.array([179,255,255]) 
+        
+        lower_blue_1 = np.array([112,50,50])
+        upper_blue_1 = np.array([130,255,255])
+        lower_blue_2 = np.array([96, 80, 2])
+        upper_blue_2 = np.array([126, 255, 255])
 
-    lower_red_mask = cv2.inRange(image, lower1, upper1)
-    upper_red_mask = cv2.inRange(image, lower2, upper2)
+        lower_red_mask = cv2.inRange(image, lower1, upper1)
+        upper_red_mask = cv2.inRange(image, lower2, upper2)
 
-    lower_blue_mask =cv2.inRange(image, lower_blue_1, upper_blue_1)
-    upper_blue_mask =cv2.inRange(image, lower_blue_2, upper_blue_2)
+        lower_blue_mask =cv2.inRange(image, lower_blue_1, upper_blue_1)
+        upper_blue_mask =cv2.inRange(image, lower_blue_2, upper_blue_2)
 
-    red_full_mask = lower_red_mask + upper_red_mask
-    blue_full_mask = lower_blue_mask + upper_blue_mask 
-    blue_only= cv2.bitwise_and(result, result, mask = blue_full_mask)
-    
-    # full_mask=blue_full_mask+red_full_mask
-    # result = cv2.bitwise_and(result, result, mask=full_mask)
-    if np.count_nonzero(red_full_mask) < np.count_nonzero(blue_full_mask):
-        if np.count_nonzero(blue_only==[78,6,0])>np.count_nonzero(blue_only):
+        red_full_mask = lower_red_mask + upper_red_mask
+        blue_full_mask = lower_blue_mask + upper_blue_mask 
+        blue_only= cv2.bitwise_and(result, result, mask = blue_full_mask)
+        
+        # full_mask=blue_full_mask+red_full_mask
+        # result = cv2.bitwise_and(result, result, mask=full_mask)
+        if np.count_nonzero(red_full_mask) < np.count_nonzero(blue_full_mask):
+            if np.count_nonzero(blue_only==[78,6,0])>np.count_nonzero(blue_only):
+                filled=fill(red_full_mask)
+                save(filled)
+                bg_removed = cv2.bitwise_and(result, result, mask = filled)
+                shape_n.append(shape_recognition(count))
+                color.append(f"Color{count}: Red")
+            elif np.count_nonzero(blue_only==[78,6,0])<np.count_nonzero(blue_only):
+                filled=fill(blue_full_mask)
+                save(filled)
+                bg_removed = cv2.bitwise_and(result, result, mask = filled)
+                shape_n.append(shape_recognition(count))
+                color.append(f"Color{count}: Blue")
+        elif np.count_nonzero(blue_full_mask) < np.count_nonzero(red_full_mask):
             filled=fill(red_full_mask)
             save(filled)
             bg_removed = cv2.bitwise_and(result, result, mask = filled)
-            return detect,shape_recognition(),bg_removed,"Red"
-        elif np.count_nonzero(blue_only==[78,6,0])<np.count_nonzero(blue_only):
-            filled=fill(blue_full_mask)
-            save(filled)
-            bg_removed = cv2.bitwise_and(result, result, mask = filled)
-            return detect,shape_recognition(),bg_removed,"Blue"
-    elif np.count_nonzero(blue_full_mask) < np.count_nonzero(red_full_mask):
-        filled=fill(red_full_mask)
-        save(filled)
-        bg_removed = cv2.bitwise_and(result, result, mask = filled)
-        return detect, shape_recognition(),bg_removed,"Red"
-    else:
-        return result, "undefined"
+            shape_n.append(shape_recognition(count))
+            color.append(f"Color{count}: Red")
+        else:
+            return result, "undefined", "undefined", "undefined"
+        
+        count+=1
+
+    return detect, ', '.join(shape_n), ', '.join(color)
 
 
 
-iface=gr.Interface(convert,
+iface=gr.Interface(detect,
     inputs=gr.inputs.Image(label="Upload an Image"),
     outputs=[gr.outputs.Image(label="Detected Image"),
-    gr.outputs.Label(num_top_classes=1, label="Shape"),
-    gr.outputs.Image(label="Removed Background Image"),
-    gr.outputs.Label(label="Color"),
+    gr.outputs.Label(label="Shape"),
+    # gr.outputs.Image(label="Removed Background Image"),
+    gr.outputs.Label(label="Color")
     ],
     title="Traffic Sign Detection with Shape & Color Description",
     examples=['examples/Screenshot (57).png','./examples/1.jpg','./examples/2.jpg', './examples/got.jpg', './examples/goti.jpg', './examples/images.jpg'],
