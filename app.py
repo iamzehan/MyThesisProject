@@ -72,10 +72,10 @@ def detect(image):
             score = float(out[1][0][i])
             bbox = [float(v) for v in out[2][0][i]]
             if score > 0.8:
-                x = (bbox[1] * cols) #-20 #left
-                y = (bbox[0] * rows)  #- 25 #top
-                right = (bbox[3] * cols) #+ 20
-                bottom = (bbox[2] * rows ) #+20
+                x = (bbox[1] * cols) -10 #left
+                y = (bbox[0] * rows) - 15 #top
+                right = (bbox[3] * cols)+ 10
+                bottom = (bbox[2] * rows )+10
                 crop=cropper[int(y): int(bottom),int(x):int(right)]
                 roi.append(crop)
                 detect=cv2.rectangle(img, (int(x), int(y)), (int(right), int(bottom)), (15, 255,100), thickness=4)
