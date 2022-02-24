@@ -36,8 +36,6 @@ def shape_recognition(number):
     predictions=model.predict(image_array)
     score = tf.nn.softmax(predictions[0])
     # return {f"{number +' '+ labels[i] }": float(score[i]) for i in range(len(labels))}
-    print(type(score))
-    print(type(labels[np.argmax(score)]))
     return f'Shape {str(number)}:'+" "+ f'{labels[np.argmax(score)]}'
     
 def detect(image):
