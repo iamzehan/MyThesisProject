@@ -36,6 +36,8 @@ def shape_recognition(number):
     predictions=model.predict(image_array)
     score = tf.nn.softmax(predictions[0])
     # return {f"{number +' '+ labels[i] }": float(score[i]) for i in range(len(labels))}
+    print(type(score))
+    print(type(labels[np.argmax(score)]))
     return f'Shape {str(number)}:'+" "+ f'{labels[np.argmax(score)]}'
     
 def detect(image):
@@ -112,19 +114,24 @@ def detect(image):
             if np.count_nonzero(blue_only==[78,6,0])>np.count_nonzero(blue_only):
                 filled=fill(red_full_mask)
                 save(filled)
-                bg_removed = cv2.bitwise_and(result, result, mask = filled)
+                #bg_removed = cv2.bitwise_and(result, result, mask = filled)
                 shape_n.append(shape_recognition(count))
                 color.append(f"Color{count}: Red")
             elif np.count_nonzero(blue_only==[78,6,0])<np.count_nonzero(blue_only):
-                filled=fill(blue_full_mask)
-                save(filled)
-                bg_removed = cv2.bitwise_and(result, result, mask = filled)
-                shape_n.append(shape_recognition(count))
-                color.append(f"Color{count}: Blue")
+                if np.count_nonzero(red_full_mask) != 0:
+                    filled=fill(red_full_mask)
+                    #bg_removed = cv2.bitwise_and(result, result, mask = filled)
+                    shape_n.append(shape_recognition(count))
+                    color.append(f"Color{count}: Red")
+                elif np.count_nonzero(red_full_mask) == 0 :
+                    filled=fill(blue_full_mask)
+                    #bg_removed = cv2.bitwise_and(result, result, mask = filled)
+                    shape_n.append(shape_recognition(count))
+                    color.append(f"Color{count}: Blue")
         elif np.count_nonzero(blue_full_mask) < np.count_nonzero(red_full_mask):
             filled=fill(red_full_mask)
             save(filled)
-            bg_removed = cv2.bitwise_and(result, result, mask = filled)
+            #bg_removed = cv2.bitwise_and(result, result, mask = filled)
             shape_n.append(shape_recognition(count))
             color.append(f"Color{count}: Red")
         else:
