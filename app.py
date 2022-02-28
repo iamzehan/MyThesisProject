@@ -135,7 +135,7 @@ def outputs(roi):
       
       if list(rb_img[y,x])==[255,0, 0] or list(rb_img[y,x])==[255,0, 255]:
         # save(fill(red_full_mask))
-        print(fill(red_full_mask).shape)
+        #print(fill(red_full_mask).shape)
         shape_n.append(shape_recognition(count,fill(red_full_mask)))
         color.append(f"Color {count}: Red")
       elif list(rb_img[y,x])==[0, 0, 255]:
