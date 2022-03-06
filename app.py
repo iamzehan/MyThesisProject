@@ -125,6 +125,7 @@ def ts_recognition(number, image):
     labels=pd.read_csv('./recognition_model/labels.csv')
     labels=labels['Name']
     image=resize(image)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     image_array= np.expand_dims(image, axis=0)
     predictions=model(image_array)
     score = tf.nn.softmax(predictions[0])
@@ -140,7 +141,7 @@ def outputs(roi):
       result = i.copy()
       x,y=list(coi(i))
       image = cv2.cvtColor(result, cv2.COLOR_RGB2HSV)
-      gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+      
       red_full_mask = red_mask(image)
 
       blue_full_mask = blue_mask(image)
@@ -160,12 +161,12 @@ def outputs(roi):
         #print(fill(red_full_mask).shape)
         shape_n.append(shape_recognition(count,fill(red_full_mask)))
         color.append(f"Color {count}: Red")
-        sign.append(ts_recognition(count,gray))
+        sign.append(ts_recognition(count,result))
       elif list(rb_img[y,x])==[0, 0, 255]:
         # print(fill(red_full_mask).shape)
         shape_n.append(shape_recognition(count,fill(blue_full_mask)))
         color.append(f"Color {count}: Blue")
-        sign.append(ts_recognition(count,gray))
+        sign.append(ts_recognition(count,result))
 
       else:
         shape_n.append(f"Shape {count}: Undefined")
@@ -213,7 +214,7 @@ def detect(image):
                 crop=cropper[int(y): int(bottom),int(x):int(right)]
                 roi.append(crop)
                 detect=cv2.rectangle(img, (int(x), int(y)), (int(right), int(bottom)), (15, 255,100), thickness=4)
-                cv2.putText(detect, f'{i+1}', (int(x), int(y-10)), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1.0, (255,255,0), 3)
+                cv2.putText(detect, f'{i+1}', (int(x), int(y-10)), cv2.FONT_HERSHEY_PLAIN, 0.8, (255,255,0), 2)
     
     shape_n,color, sign=outputs(roi)
     return detect, ', '.join(shape_n), ', '.join(color), ', '.join(sign)
@@ -226,10 +227,10 @@ iface=gr.Interface(detect,
     gr.outputs.Label(label="Color"),
     gr.outputs.Label(label="Signs")
     ],
-    title="Traffic Sign Detection with Shape & Color Description",
+    title="Bangladeshi Traffic Sign Detection & Recognition with Shape-Color Description",
     examples=['examples/1.jpg','./examples/2.jpg', './examples/3.jpg'],
-    description='This is my Thesis Project',
-    theme='grass'
+    description='The following is an Implementation of a Thesis paper done by Md. Ziaul Karim, \n for the Department of Software Engineering, Daffodil International University Undergraduate program as a proof of concept.',
+    theme='dark-peach'
 )
 
 iface.launch(debug=True)
