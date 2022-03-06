@@ -3,16 +3,24 @@ import tensorflow as tf
 import gradio as gr
 import numpy as np
 import cv2 as cv2
+import pandas as pd
 
-json_file = open('./model/model1.json', 'r')
-loaded_model_json = json_file.read()
-json_file.close()
-model = model_from_json(loaded_model_json)
-model.load_weights("./model/model1.h5")
+def shapeModel():
+  labels=["Octagon","Triangle","Circle Prohibitory","Circle","Rhombus"]
+  json_file = open('./model/model1.json', 'r')
+  loaded_model_json = json_file.read()
+  json_file.close()
+  model = model_from_json(loaded_model_json)
+  model.load_weights("./model/model1.h5")
+  return [model,labels]
 
-labels=["Octagon","Triangle","Circle Prohibitory","Circle","Rhombus"]
-
-
+def recognitionModel():
+  json_file = open('./recognition_model/model.json', 'r')
+  loaded_model_json = json_file.read()
+  json_file.close()
+  model = model_from_json(loaded_model_json)
+  model.load_weights("./recognition_model/model.h5")
+  return model
 
 
 def dark_image(h,w):
@@ -103,6 +111,8 @@ def resize(img):
 
 
 def shape_recognition(number, image):
+    model=shapeModel()[0]
+    labels=shapeModel()[1]
     image=resize(image)
     image_array= np.expand_dims(image, axis=0)
     predictions=model.predict(image_array)
@@ -110,15 +120,27 @@ def shape_recognition(number, image):
     # return {f"{number +' '+ labels[i] }": float(score[i]) for i in range(len(labels))}
     return f'Shape {str(number)}:'+" "+ f'{labels[np.argmax(score)]}'
 
+def ts_recognition(number, image):
+    model=recognitionModel()
+    labels=pd.read_csv('./recognition_model/labels.csv')
+    labels=labels['Name']
+    image=resize(image)
+    image_array= np.expand_dims(image, axis=0)
+    predictions=model(image_array)
+    score = tf.nn.softmax(predictions[0])
+    # return {f"{number +' '+ labels[i] }": float(score[i]) for i in range(len(labels))}
+    return f'Sign {str(number)}:'+" "+ f'{labels[np.argmax(score)]}'
+
 def outputs(roi):
     shape_n=[]
     color=[]
+    sign=[]
     count=1
     for i in roi:
       result = i.copy()
       x,y=list(coi(i))
       image = cv2.cvtColor(result, cv2.COLOR_RGB2HSV)
-
+      gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
       red_full_mask = red_mask(image)
 
       blue_full_mask = blue_mask(image)
@@ -135,19 +157,22 @@ def outputs(roi):
       
       if list(rb_img[y,x])==[255,0, 0] or list(rb_img[y,x])==[255,0, 255]:
         # save(fill(red_full_mask))
-        print(fill(red_full_mask).shape)
+        #print(fill(red_full_mask).shape)
         shape_n.append(shape_recognition(count,fill(red_full_mask)))
         color.append(f"Color {count}: Red")
+        sign.append(ts_recognition(count,gray))
       elif list(rb_img[y,x])==[0, 0, 255]:
         # print(fill(red_full_mask).shape)
         shape_n.append(shape_recognition(count,fill(blue_full_mask)))
         color.append(f"Color {count}: Blue")
+        sign.append(ts_recognition(count,gray))
 
       else:
         shape_n.append(f"Shape {count}: Undefined")
         color.append(f"Color {count}: Undefined")
+        sign.append(f"Sign{count}: Undefined")
       count+=1
-    return shape_n, color 
+    return shape_n, color ,sign
 
 def detect(image):
     with tf.io.gfile.GFile('./detection_model/frozen_inference_graph.pb', 'rb') as f:
@@ -190,15 +215,16 @@ def detect(image):
                 detect=cv2.rectangle(img, (int(x), int(y)), (int(right), int(bottom)), (15, 255,100), thickness=4)
                 cv2.putText(detect, f'{i+1}', (int(x), int(y-10)), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1.0, (255,255,0), 3)
     
-    shape_n,color=outputs(roi)
-    return detect, ', '.join(shape_n), ', '.join(color)
+    shape_n,color, sign=outputs(roi)
+    return detect, ', '.join(shape_n), ', '.join(color), ', '.join(sign)
 
 iface=gr.Interface(detect,
     inputs=gr.inputs.Image(label="Upload an Image"),
     outputs=[gr.outputs.Image(label="Detected Image"),
     gr.outputs.Label(label="Shape"),
     # gr.outputs.Image(label="Removed Background Image"),
-    gr.outputs.Label(label="Color")
+    gr.outputs.Label(label="Color"),
+    gr.outputs.Label(label="Signs")
     ],
     title="Traffic Sign Detection with Shape & Color Description",
     examples=['examples/1.jpg','./examples/2.jpg', './examples/3.jpg'],
