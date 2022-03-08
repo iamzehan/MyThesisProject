@@ -1,0 +1,23 @@
+
+.gradio_wrapper .gradio_bg[is_embedded=false] .gradio_page .footer {
+    display:none;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    --tw-text-opacity: 1;
+    color: rgba(156, 163, 175, var(--tw-text-opacity));
+}
+.gradio_wrapper .gradio_bg[is_embedded=false] .gradio_page .myfooter{
+    display: inline-flex;
+    flex-shrink:0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    --tw-text-opacity: 1;
+    color: rgba(156, 163, 175, var(--tw-text-opacity));
+}

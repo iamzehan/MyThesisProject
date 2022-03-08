@@ -1,3 +1,4 @@
+from cgitb import html
 from keras.models import model_from_json
 import tensorflow as tf
 import gradio as gr
@@ -94,11 +95,11 @@ def blue_fill(img):
 
 #-------------------------- ⬇⬇⬇ Calculating Center of Image ⬇⬇⬇---------------------------
 def coi(img):
-  gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+  gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
   moment = cv2.moments(gray_img)
   X = int(moment ["m10"] / moment["m00"])
   Y = int(moment ["m01"] / moment["m00"])
-  return X,Y
+  return X+10,Y+8
 #------------------------- ➡➡➡ This block ends ⬅⬅⬅ -----------------------------------
 
 def resize(img):
@@ -125,7 +126,7 @@ def ts_recognition(number, image):
     labels=pd.read_csv('./recognition_model/labels.csv')
     labels=labels['Name']
     image=resize(image)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     image_array= np.expand_dims(image, axis=0)
     predictions=model(image_array)
     score = tf.nn.softmax(predictions[0])
@@ -171,7 +172,7 @@ def outputs(roi):
       else:
         shape_n.append(f"Shape {count}: Undefined")
         color.append(f"Color {count}: Undefined")
-        sign.append(f"Sign{count}: Undefined")
+        sign.append(ts_recognition(count,result))
       count+=1
     return shape_n, color ,sign
 
@@ -212,12 +213,15 @@ def detect(image):
                 right = (bbox[3] * cols) + 10
                 bottom = (bbox[2] * rows ) +10
                 crop=cropper[int(y): int(bottom),int(x):int(right)]
-                roi.append(crop)
-                detect=cv2.rectangle(img, (int(x), int(y)), (int(right), int(bottom)), (15, 255,100), thickness=4)
-                cv2.putText(detect, f'{i+1}', (int(x), int(y-10)), cv2.FONT_HERSHEY_PLAIN, 0.8, (255,255,0), 2)
-    
-    shape_n,color, sign=outputs(roi)
-    return detect, ', '.join(shape_n), ', '.join(color), ', '.join(sign)
+                if crop.shape[0]!=0 and crop.shape[1]!=0:
+                  roi.append(crop)
+                  detect=cv2.rectangle(img, (int(x), int(y)), (int(right), int(bottom)), (15, 255,100), thickness=4)
+                  cv2.putText(detect, f'{i+1}', (int(x), int(y-10)), cv2.FONT_HERSHEY_PLAIN, 0.8, (255,255,0), 2) 
+    if roi:
+      shape_n,color, sign=outputs(roi)
+      return detect, ', '.join(shape_n), ', '.join(color), ', '.join(sign)
+    else:
+      return image, 'Undetected', 'Undetected', 'Undetected'
 
 iface=gr.Interface(detect,
     inputs=gr.inputs.Image(label="Upload an Image"),
@@ -228,9 +232,10 @@ iface=gr.Interface(detect,
     gr.outputs.Label(label="Signs")
     ],
     title="Bangladeshi Traffic Sign Detection & Recognition with Shape-Color Description",
-    examples=['examples/1.jpg','./examples/2.jpg', './examples/3.jpg'],
+    examples=['examples/1.jpg','./examples/2.jpg', './examples/4.jpg'],
+    layout='center',
     description='The following is an Implementation of a Thesis paper done by Md. Ziaul Karim, \n for the Department of Software Engineering, Daffodil International University Undergraduate program as a proof of concept.',
-    theme='dark-peach'
+    theme='dark-peach',css='./style.css',article='<div class="myfooter"><a href="https://codingwithzk.netlify.app", target="_blank">© Made by Ziaul Karim</a></div>'
 )
 
 iface.launch(debug=True)
