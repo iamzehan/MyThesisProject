@@ -1,23 +1,26 @@
 
 .gradio_wrapper .gradio_bg[is_embedded=false] .gradio_page .footer {
     display:none;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    gap: 0.625rem;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-    --tw-text-opacity: 1;
-    color: rgba(156, 163, 175, var(--tw-text-opacity));
 }
-.gradio_wrapper .gradio_bg[is_embedded=false] .gradio_page .myfooter{
-    display: inline-flex;
-    flex-shrink:0;
+.dark .gradio_wrapper .gradio_page .article{
     align-items: center;
+    text-align: center;
+    padding-top: 50px;
     justify-content: center;
-    gap: 0.625rem;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-    --tw-text-opacity: 1;
-    color: rgba(156, 163, 175, var(--tw-text-opacity));
+    color: #fff
+}
+.gradio_wrapper .gradio_bg b, .gradio_wrapper .gradio_bg strong {
+    font-weight: bolder;
+    color: #DB8962;
+}
+.gradio_wrapper .gradio_bg b, .gradio_wrapper .gradio_bg a{
+    font-weight:normal;
+}
+.gradio_wrapper .gradio_page .title {
+    color:#DB8962;
+    font-weight: bold;
+    padding: 1rem;
+    text-align: center;
+    font-size: 2.25rem;
+    line-height: 2.5rem;
 }

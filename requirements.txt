@@ -1,6 +1,5 @@
 gradio==2.7.5.2
 Jinja2==3.0.3
-keras==2.8.0
 numpy==1.22.2
 opencv-python-headless==4.5.5.62
 pandas==1.4.1

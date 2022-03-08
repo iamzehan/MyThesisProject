@@ -1,17 +1,16 @@
-from cgitb import html
-from keras.models import model_from_json
+from datetime import date
 import tensorflow as tf
+import pandas as pd
 import gradio as gr
 import numpy as np
 import cv2 as cv2
-import pandas as pd
 
 def shapeModel():
   labels=["Octagon","Triangle","Circle Prohibitory","Circle","Rhombus"]
   json_file = open('./model/model1.json', 'r')
   loaded_model_json = json_file.read()
   json_file.close()
-  model = model_from_json(loaded_model_json)
+  model = tf.keras.models.model_from_json(loaded_model_json)
   model.load_weights("./model/model1.h5")
   return [model,labels]
 
@@ -19,7 +18,7 @@ def recognitionModel():
   json_file = open('./recognition_model/model.json', 'r')
   loaded_model_json = json_file.read()
   json_file.close()
-  model = model_from_json(loaded_model_json)
+  model = tf.keras.models.model_from_json(loaded_model_json)
   model.load_weights("./recognition_model/model.h5")
   return model
 
@@ -231,11 +230,11 @@ iface=gr.Interface(detect,
     gr.outputs.Label(label="Color"),
     gr.outputs.Label(label="Signs")
     ],
-    title="Bangladeshi Traffic Sign Detection & Recognition with Shape-Color Description",
+    title="Bangladeshi Traffic Sign, Detection, Shape-Color Recognition & Classification",
     examples=['examples/1.jpg','./examples/2.jpg', './examples/4.jpg'],
     layout='center',
-    description='The following is an Implementation of a Thesis paper done by Md. Ziaul Karim, \n for the Department of Software Engineering, Daffodil International University Undergraduate program as a proof of concept.',
-    theme='dark-peach',css='./style.css',article='<div class="myfooter"><a href="https://codingwithzk.netlify.app", target="_blank">© Made by Ziaul Karim</a></div>'
+    description='The following is an Implementation of a Thesis paper done by Md. Ziaul Karim, \n for the Department of Software Engineering, Daffodil International University\'s Undergraduate program as a proof of concept.',
+    theme='dark-peach',css='./style.css',article=f'<a href="https://codingwithzk.netlify.app", target="_blank">© {date.today().year} Copyright | Made by <strong>Ziaul Karim</strong></a><a href="https://gradio.app/"> | with <strong>Gradio</strong></a>'
 )
 
 iface.launch(debug=True)
