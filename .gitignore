@@ -1,4 +1,4 @@
-flagged
+./flagged
 env
 .gitignore
 detect.py
@@ -7,4 +7,4 @@ Screenshot (59).png
 image_temp.png
 test.py
 final.py
-backup
+./backup

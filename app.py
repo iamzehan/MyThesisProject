@@ -237,4 +237,4 @@ iface=gr.Interface(detect,
     theme='dark-peach',css='./style.css',article=f'<a href="https://codingwithzk.netlify.app", target="_blank">© {date.today().year} Copyright | Made by <strong>Ziaul Karim</strong></a><a href="https://gradio.app/"> | with <strong>Gradio</strong></a>'
 )
 
-iface.launch(debug=True)
+iface.launch(debug=True, favicon_path='./favicon.png',height=300,width=500)
